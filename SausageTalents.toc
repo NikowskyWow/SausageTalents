@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cffffd100Sausage|r Talents
+## Notes: Unified Profile Manager (v1.0.0)
+## Author: Sausage Party / Kokotiar
+## Version: 1.0.0
+## SavedVariables: SausageGlobalDB
+
+SausageTalents.lua
