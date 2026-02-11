@@ -1,10 +1,10 @@
 -- ============================================================================
--- SAUSAGE TALENTS (WotLK 3.3.5a) - v1.1.2
+-- SAUSAGE TALENTS (WotLK 3.3.5a) - v1.2.3 (FINAL EQUIPMENT FIX)
 -- GitHub: github.com/NikowskyWow/SausageTalents
 -- ============================================================================
 
 local ADDON_NAME = "SausageTalents"
-local SAUSAGE_VERSION = "1.1.2"
+local SAUSAGE_VERSION = "1.2.3"
 local GITHUB_URL = "github.com/NikowskyWow/SausageTalents"
 local TICK_RATE = 0.15 
 
@@ -36,7 +36,6 @@ local function InitDB()
     local _, englishClass = UnitClass("player")
     SausageGlobalDB[r][c].class = englishClass
     
-    -- Inicializácia pozície minimapy
     if not SausageGlobalDB.minimapPos then SausageGlobalDB.minimapPos = 45 end
 end
 
@@ -134,10 +133,49 @@ local function RestoreBarsInstant(profile)
         local d = profile.bars[slot]
         if d then
             local success = false
-            if d.type == "spell" then success = PickupSpellByName(d.name)
-            elseif d.type == "item" then PickupItem(d.id) success = true
-            elseif d.type == "macro" then PickupMacro(d.id) success = true end
-            if success and (CursorHasSpell() or CursorHasItem() or CursorHasMacro()) then PlaceAction(slot) end
+            
+            -- *** 1. SPELLS ***
+            if d.type == "spell" then 
+                success = PickupSpellByName(d.name)
+            
+            -- *** 2. ITEMS ***
+            elseif d.type == "item" then 
+                PickupItem(d.id) 
+                if not CursorHasItem() and d.name then
+                    PickupItem(d.name) 
+                end
+                success = true
+            
+            -- *** 3. MACROS ***
+            elseif d.type == "macro" then 
+                PickupMacro(d.id) 
+                success = true
+            
+            -- *** 4. EQUIPMENT SETS (FIXED: 1-based index) ***
+            elseif d.type == "equipmentset" then
+                local numSets = GetNumEquipmentSets()
+                if numSets > 0 then
+                    -- Lua indexovanie začína od 1
+                    for i = 1, numSets do 
+                        local name = GetEquipmentSetInfo(i)
+                        if name == d.id then
+                            PickupEquipmentSet(i)
+                            success = true
+                            break
+                        end
+                    end
+                end
+                
+            -- *** 5. COMPANIONS ***
+            elseif d.type == "companion" then
+                PickupCompanion(d.subType, d.id)
+                success = true
+            end
+            
+            -- Place Action
+            if success and (CursorHasSpell() or CursorHasItem() or CursorHasMacro() or GetCursorInfo()) then 
+                PlaceAction(slot) 
+            end
             ClearCursor()
         end
         if slot % 10 == 0 then UpdateProgress(slot, totalSlots, "Restoring Bars") end
@@ -182,6 +220,8 @@ local function SaveProfile(name)
     local r, c = GetRealmName(), UnitName("player")
     local _, class = UnitClass("player")
     local profile = { class = class, talents = {}, bars = {} }
+    
+    -- Save Talents
     for tab = 1, GetNumTalentTabs() do
         profile.talents[tab] = {}
         for talent = 1, GetNumTalents(tab) do
@@ -189,13 +229,24 @@ local function SaveProfile(name)
             if rank > 0 then profile.talents[tab][talent] = rank end
         end
     end
+    
+    -- Save Bars
     for slot = 1, 120 do
         local t, id, st = GetActionInfo(slot)
         if t then
-            local sName = (t == "spell") and (GetSpellName(id, "spell") or GetSpellInfo(id)) or nil
+            local sName = nil
+            if t == "spell" then
+                sName = GetSpellName(id, "spell") or GetSpellInfo(id)
+            elseif t == "item" then
+                sName = GetItemInfo(id)
+            elseif t == "equipmentset" then
+                sName = id -- Ukladáme Meno setu
+            end
+            
             profile.bars[slot] = { type = t, id = id, subType = st, name = sName }
         end
     end
+    
     SausageGlobalDB[r][c][name] = profile
     print("|cffffd100Sausage:|r Profile '"..name.."' saved.")
     UpdateList()
@@ -373,11 +424,10 @@ local charDrop = CreateFrame("Frame", "SausageCharDrop", MainFrame, "UIDropDownM
 charDrop:SetPoint("TOPRIGHT", -20, -40)
 UIDropDownMenu_SetWidth(charDrop, 150)
 
--- *** FIX: Pridaná podmienka type(data) == "table" ***
 local function InitRealmMenu(self, level)
     local info = UIDropDownMenu_CreateInfo()
     for rName, data in pairs(SausageGlobalDB or {}) do
-        if type(data) == "table" then -- Ignorujeme minimapPos a iné nastavenia
+        if type(data) == "table" then
             info.text = rName
             info.func = function() selectedRealm = rName selectedChar = "None" UpdateList() end
             UIDropDownMenu_AddButton(info, level)
