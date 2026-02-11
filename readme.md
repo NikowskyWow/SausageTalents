@@ -2,7 +2,7 @@
 
 **Sausage Talents** is a premium profile manager designed for **World of Warcraft 3.3.5a**. It allows you to save, load, and share complete builds (Talents + Action Bars) between characters and realms instantly.
 
-* **Version**: v1.1.0
+* **Version**: 1.1.0
 * **WoW**: 3.3.5a
 * **Author**: Sausage Party
 
