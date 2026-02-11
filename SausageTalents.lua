@@ -4,7 +4,7 @@
 -- ============================================================================
 
 local ADDON_NAME = "SausageTalents"
-local SAUSAGE_VERSION = "1.1.2"
+local SAUSAGE_VERSION = "v1.1.0"
 local GITHUB_URL = "github.com/NikowskyWow/SausageTalents"
 local TICK_RATE = 0.15 
 
